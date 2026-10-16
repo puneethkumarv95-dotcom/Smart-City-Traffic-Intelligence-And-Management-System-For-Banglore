@@ -1,0 +1,29 @@
+{
+  "name": "smart-city-traffic-intelligence",
+  "version": "1.0.0",
+  "description": "Smart City Traffic Intelligence & Management System - MCA Major Project",
+  "private": true,
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "install:all": "npm install && npm install --prefix server && npm install --prefix client",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "seed": "npm --prefix server run seed",
+    "test:server": "npm --prefix server test",
+    "test:client": "npm --prefix client test",
+    "build:client": "npm --prefix client run build"
+  },
+  "keywords": [
+    "smart-city",
+    "traffic-management",
+    "mern",
+    "ai",
+    "geospatial"
+  ],
+  "author": "MCA Engineering Team",
+  "license": "ISC"
+}
+
