@@ -34,7 +34,10 @@ const createIncidentSchema = z.object({
   address: z.string().min(3, 'Address is required'),
   city: z.string().optional().default('Bengaluru'),
   zoneId: z.string().optional(),
-  isAnonymous: z.coerce.boolean().optional().default(false)
+  isAnonymous: z.preprocess(
+    (val) => (val === undefined ? false : val === 'true' || val === true),
+    z.boolean()
+  ).optional().default(false)
 });
 
 const verifyIncidentSchema = z.object({

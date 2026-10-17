@@ -66,7 +66,7 @@ This document tracks the implementation, test coverage, and completion status of
 | **F34** | Emergency Vehicle Priority Routing | Simulated siren-preemption and clear-corridor route dispatch | Phase 5 | ⏳ Planned |
 | **F35** | Smart Parking | Facility listings, live availability, slot bookings, operator console | Phase 6 | ⏳ Planned |
 | **F36** | AI Incident Classification | NLP text categorization into structured hazard types | Phase 5 | ⏳ Planned |
-| **F37** | Duplicate Incident Detection | Spatial-temporal + text similarity duplicate incident matching | Phase 5 | ⏳ Planned |
+| **F37** | Duplicate Incident Detection | Spatial-temporal + text similarity duplicate incident matching | Phase 2 | ✅ Verified |
 | **F38** | Accident Risk Scoring | Statistical accident vulnerability score by road segment | Phase 5 | ⏳ Planned |
 | **F39** | Traffic-Aware Travel Time | Real-time routing delay computations with simulated fallback | Phase 3 | ⏳ Next |
 | **F40** | Weather-Related Hazard Alerts | Weather API rainfall & fog overlay linked to road warning advisory | Phase 6 | ⏳ Planned |

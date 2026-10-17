@@ -48,3 +48,4 @@ incidentAssignmentSchema.index({ assignedOfficer: 1, assignmentStatus: 1 });
 incidentAssignmentSchema.index({ incident: 1, assignedDate: -1 });
 
 module.exports = mongoose.model('IncidentAssignment', incidentAssignmentSchema);
+

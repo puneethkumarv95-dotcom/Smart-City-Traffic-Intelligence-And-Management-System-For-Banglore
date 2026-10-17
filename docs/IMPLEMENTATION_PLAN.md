@@ -67,12 +67,19 @@
 - [x] Seed script for Bengaluru zones and default credentials.
 - [x] Phase 1 Unit/Integration tests.
 
-### Phase 2: Core Incident Management & Verification
-- Comprehensive incident reporting schema with GeoJSON coordinates.
-- Multi-category reporting with photo/media upload handling.
-- Verification workflow: Submitted -> Under Review -> Verified -> Assigned -> In Progress -> Resolved / Rejected.
-- Citizen community voting (confirm/dispute) with deduplication safeguards.
-- Audit logging of all officer transitions.
+### Phase 2: Core Incident Management & Verification (Completed & Verified)
+- [x] Comprehensive incident reporting schema with GeoJSON 2dsphere indexing (`INC-YYYYMM-XXXX`).
+- [x] Multi-category reporting with photo/media upload handling (Multer disk storage + size/MIME guards).
+- [x] Location picker with interactive Leaflet map, draggable pin, GPS geolocation, and Nominatim reverse geocoding.
+- [x] Verification workflow: Submitted -> Under Review / Info Requested -> Verified -> Assigned -> In Progress -> Resolved / Rejected.
+- [x] Workload-balanced officer dispatch creating dedicated `IncidentAssignment` records.
+- [x] Citizen community voting (confirm/dispute) with 1-active-vote guard and vote-change support.
+- [x] Heuristic community consensus (5+ confirmations auto-promotes to `under_review`).
+- [x] Smart duplicate detection engine combining geospatial proximity, time window, category, and Jaccard token text similarity.
+- [x] Citizen post-resolution satisfaction rating (1-5 stars) and feedback review.
+- [x] Super Admin incident aggregation statistics with MongoDB aggregation pipelines.
+- [x] Audit logging in `IncidentStatusHistory` and `AuditLog` of all actor transitions.
+- [x] Automated backend integration tests: 34/34 passing. React client build: 0 errors.
 
 ### Phase 3: Live Traffic, Maps & Real-Time Sync
 - React Leaflet smart city live map with real-time incident markers.

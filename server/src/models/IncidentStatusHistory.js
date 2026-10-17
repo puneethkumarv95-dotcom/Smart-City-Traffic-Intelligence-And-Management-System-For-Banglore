@@ -48,3 +48,4 @@ const incidentStatusHistorySchema = new mongoose.Schema(
 incidentStatusHistorySchema.index({ incident: 1, timestamp: -1 });
 
 module.exports = mongoose.model('IncidentStatusHistory', incidentStatusHistorySchema);
+

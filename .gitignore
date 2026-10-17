@@ -9,4 +9,5 @@ coverage/
 __pycache__/
 *.pyc
 .pytest_cache/
-
+uploads/
+server/uploads/
