@@ -4,6 +4,10 @@ const User = require('../models/User');
 const CityZone = require('../models/CityZone');
 const Incident = require('../models/Incident');
 const IncidentVote = require('../models/IncidentVote');
+const RoadClosure = require('../models/RoadClosure');
+const TrafficAlert = require('../models/TrafficAlert');
+const SavedRoute = require('../models/SavedRoute');
+const Notification = require('../models/Notification');
 const AuditLog = require('../models/AuditLog');
 const connectDB = require('../config/db');
 const logger = require('./logger');
@@ -17,6 +21,10 @@ const seedDatabase = async () => {
     await CityZone.deleteMany({});
     await Incident.deleteMany({});
     await IncidentVote.deleteMany({});
+    await RoadClosure.deleteMany({});
+    await TrafficAlert.deleteMany({});
+    await SavedRoute.deleteMany({});
+    await Notification.deleteMany({});
     await AuditLog.deleteMany({});
 
     logger.info('--- Seeding Bengaluru Traffic Zones ---');
@@ -297,6 +305,115 @@ const seedDatabase = async () => {
     const insertedIncidents = await Incident.insertMany(incidentsData);
     logger.info(`Seeded ${insertedIncidents.length} Real-World Bengaluru Demonstration Incidents`);
 
+    logger.info('--- Seeding Authorized Road Closures & Diversions ---');
+    const closuresData = [
+      {
+        title: 'Central Silk Board Metro Interchange Pier Erection',
+        roadName: 'Outer Ring Road - Silk Board Junction Slip Road',
+        zone: zoneMap['CSB-03'],
+        reason: 'Heavy machinery and crane positioning for Namma Metro Yellow/Blue Line interchange',
+        diversionInstructions: 'Light motor vehicles diverted via 14th Main HSR Layout Sector 4 towards BTM Ring Road.',
+        location: {
+          type: 'Point',
+          coordinates: [77.6238, 12.9177]
+        },
+        address: 'Central Silk Board Junction, Hosur Road, Bengaluru',
+        startTime: new Date(Date.now() - 12 * 60 * 60 * 1000),
+        endTime: new Date(Date.now() + 48 * 60 * 60 * 1000),
+        isActive: true,
+        severity: 'partial',
+        createdBy: policeUser._id,
+        createdByName: policeUser.name
+      },
+      {
+        title: 'Hebbal Flyover Airport Ramp Structural Bitumen Re-surfacing',
+        roadName: 'Hebbal Flyover Airport-Bound East Ramp',
+        zone: zoneMap['HEB-02'],
+        reason: 'Emergency bridge expansion joint repair and asphalt micro-surfacing',
+        diversionInstructions: 'All Airport and Yelahanka traffic directed under the flyover via Outer Ring Road service carriageway.',
+        location: {
+          type: 'Point',
+          coordinates: [77.597, 13.0358]
+        },
+        address: 'Hebbal Flyover Junction, Outer Ring Road, Bengaluru',
+        startTime: new Date(Date.now() - 4 * 60 * 60 * 1000),
+        endTime: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        isActive: true,
+        severity: 'full',
+        createdBy: policeUser._id,
+        createdByName: policeUser.name
+      }
+    ];
+    const insertedClosures = await RoadClosure.insertMany(closuresData);
+    logger.info(`Seeded ${insertedClosures.length} Active Road Closures`);
+
+    logger.info('--- Seeding City-Wide Traffic Advisories & Alerts ---');
+    const alertsData = [
+      {
+        title: 'Severe Rainfall & Flash Waterlogging Advisory',
+        message: 'IMD Bengaluru forecasts heavy monsoon precipitation. Water accumulation likely at Bellandur, Silk Board, and Hebbal underpasses. Commuters advised to monitor live traffic grid.',
+        severity: 'warning',
+        affectedCorridors: ['Outer Ring Road', 'Hosur Road', 'Ballari Road'],
+        affectedZones: [zoneMap['CSB-03'], zoneMap['HEB-02']],
+        validFrom: new Date(),
+        validUntil: new Date(Date.now() + 36 * 60 * 60 * 1000),
+        isActive: true,
+        issuedBy: policeUser._id,
+        issuerName: 'Bengaluru Traffic Police Directorate'
+      }
+    ];
+    const insertedAlerts = await TrafficAlert.insertMany(alertsData);
+    logger.info(`Seeded ${insertedAlerts.length} Official Traffic Advisories`);
+
+    logger.info('--- Seeding Commuter Saved Routes ---');
+    const savedRoutesData = [
+      {
+        name: 'Daily Office Commute (Hebbal to Silk Board)',
+        user: citizenUser._id,
+        origin: {
+          address: 'Hebbal Flyover Junction, Outer Ring Road',
+          coordinates: [77.597, 13.0358]
+        },
+        destination: {
+          address: 'Hosur Road, Central Silk Board Junction',
+          coordinates: [77.6238, 12.9177]
+        },
+        distanceKm: 18.4,
+        estimatedDurationMin: 45,
+        alertRadiusKm: 1.5,
+        isMonitored: true,
+        notes: 'Tech park corridor via Marathahalli & Bellandur'
+      }
+    ];
+    const insertedRoutes = await SavedRoute.insertMany(savedRoutesData);
+    logger.info(`Seeded ${insertedRoutes.length} Citizen Saved Commuter Routes`);
+
+    logger.info('--- Seeding Initial Citizen Notifications ---');
+    const notificationsData = [
+      {
+        user: citizenUser._id,
+        title: 'Road Closure Alert on Your Saved Route',
+        message: 'Central Silk Board Metro interchange closure is active on Outer Ring Road. Diversion via HSR 14th Main.',
+        type: 'road_closure',
+        severity: 'warning',
+        location: { type: 'Point', coordinates: [77.6238, 12.9177] },
+        relatedClosure: insertedClosures[0]._id,
+        isRead: false
+      },
+      {
+        user: citizenUser._id,
+        title: 'Incident Verified in Hebbal',
+        message: 'Your reported road hazard has been verified by Inspector Suresh Gowda and dispatched to field repair.',
+        type: 'incident_verified',
+        severity: 'info',
+        location: { type: 'Point', coordinates: [77.597, 13.0358] },
+        relatedIncident: insertedIncidents[0]._id,
+        isRead: false
+      }
+    ];
+    await Notification.insertMany(notificationsData);
+    logger.info(`Seeded ${notificationsData.length} Live In-App Notifications`);
+
     // Audit Log
     await AuditLog.create({
       actor: null,
@@ -309,14 +426,16 @@ const seedDatabase = async () => {
         zonesSeeded: insertedZones.length,
         usersSeeded: createdUsers.length,
         incidentsSeeded: insertedIncidents.length,
+        closuresSeeded: insertedClosures.length,
+        alertsSeeded: insertedAlerts.length,
         city: 'Bengaluru'
       },
       ipAddress: '127.0.0.1',
-      userAgent: 'Seed-Script/2.0'
+      userAgent: 'Seed-Script/3.0'
     });
 
     logger.info('=======================================================');
-    logger.info('  DATABASE RE-SEEDED SUCCESSFULLY WITH PHASE 2 INCIDENTS');
+    logger.info('  DATABASE RE-SEEDED SUCCESSFULLY WITH PHASE 3 TRAFFIC & MAPS');
     logger.info('=======================================================');
 
     process.exit(0);

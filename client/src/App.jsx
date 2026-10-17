@@ -23,6 +23,13 @@ import ComplaintTrackingPage from './pages/citizen/ComplaintTrackingPage';
 import IncidentReviewPage from './pages/police/IncidentReviewPage';
 import AdminIncidentManagement from './pages/admin/AdminIncidentManagement';
 
+// Phase 3 Modules
+import LiveTrafficMapPage from './pages/traffic/LiveTrafficMapPage';
+import RoutePlannerPage from './pages/traffic/RoutePlannerPage';
+import TrafficHistoryPage from './pages/traffic/TrafficHistoryPage';
+import RoadClosureManagementPage from './pages/police/RoadClosureManagementPage';
+import SavedRoutesPage from './pages/citizen/SavedRoutesPage';
+
 export function App() {
   const { fetchCurrentUser } = useAuthStore();
 
@@ -37,6 +44,7 @@ export function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/map" element={<LiveTrafficMapPage />} />
 
         {/* 1. Citizen Portal Layout & Routes */}
         <Route
@@ -51,8 +59,10 @@ export function App() {
           <Route path="report" element={<ReportIncidentPage />} />
           <Route path="my-reports" element={<MyReportsPage />} />
           <Route path="complaints" element={<ComplaintTrackingPage />} />
-          <Route path="map" element={<CitizenDashboard />} />
-          <Route path="routes" element={<CitizenDashboard />} />
+          <Route path="map" element={<LiveTrafficMapPage />} />
+          <Route path="routes" element={<RoutePlannerPage />} />
+          <Route path="saved-routes" element={<SavedRoutesPage />} />
+          <Route path="history" element={<TrafficHistoryPage />} />
           <Route path="parking" element={<CitizenDashboard />} />
           <Route path="sos" element={<CitizenDashboard />} />
           <Route path="profile" element={<CitizenDashboard />} />
@@ -68,9 +78,11 @@ export function App() {
           }
         >
           <Route index element={<PoliceDashboard />} />
+          <Route path="map" element={<LiveTrafficMapPage />} />
           <Route path="queue" element={<IncidentReviewPage />} />
           <Route path="incidents" element={<IncidentReviewPage />} />
-          <Route path="closures" element={<PoliceDashboard />} />
+          <Route path="closures" element={<RoadClosureManagementPage />} />
+          <Route path="history" element={<TrafficHistoryPage />} />
           <Route path="zones" element={<PoliceDashboard />} />
           <Route path="advisories" element={<PoliceDashboard />} />
           <Route path="shifts" element={<PoliceDashboard />} />
@@ -86,8 +98,9 @@ export function App() {
           }
         >
           <Route index element={<EmergencyDashboard />} />
+          <Route path="map" element={<LiveTrafficMapPage />} />
           <Route path="active" element={<EmergencyDashboard />} />
-          <Route path="routing" element={<EmergencyDashboard />} />
+          <Route path="routing" element={<RoutePlannerPage />} />
           <Route path="coordination" element={<EmergencyDashboard />} />
         </Route>
 
@@ -116,6 +129,9 @@ export function App() {
           }
         >
           <Route index element={<AdminDashboard />} />
+          <Route path="map" element={<LiveTrafficMapPage />} />
+          <Route path="closures" element={<RoadClosureManagementPage />} />
+          <Route path="history" element={<TrafficHistoryPage />} />
           <Route path="incidents" element={<AdminIncidentManagement />} />
           <Route path="users" element={<AdminDashboard />} />
           <Route path="approvals" element={<AdminDashboard />} />

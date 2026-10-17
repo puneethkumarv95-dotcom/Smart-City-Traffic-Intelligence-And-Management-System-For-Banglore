@@ -59,10 +59,12 @@ export const Sidebar = () => {
       navItems: [
         { label: 'City Dashboard', path: '/citizen', icon: Activity, exact: true },
         { label: 'Live Traffic Map', path: '/citizen/map', icon: MapPin },
+        { label: 'Smart Navigation', path: '/citizen/routes', icon: Navigation },
+        { label: 'Saved Commutes', path: '/citizen/saved-routes', icon: Bookmark },
+        { label: 'Traffic Analytics', path: '/citizen/history', icon: Clock },
         { label: 'Report Incident', path: '/citizen/report', icon: AlertTriangle },
         { label: 'My Reports', path: '/citizen/my-reports', icon: FileText },
         { label: 'Community Feed', path: '/citizen/complaints', icon: Layers },
-        { label: 'Saved Routes', path: '/citizen/routes', icon: Bookmark },
         { label: 'Smart Parking', path: '/citizen/parking', icon: Car },
         { label: 'Emergency SOS', path: '/citizen/sos', icon: LifeBuoy, highlight: true },
         { label: 'My Profile', path: '/citizen/profile', icon: User }
@@ -74,9 +76,11 @@ export const Sidebar = () => {
       icon: Shield,
       navItems: [
         { label: 'Command Center', path: '/police', icon: Activity, exact: true },
+        { label: 'Live Traffic Map', path: '/police/map', icon: MapPin },
+        { label: 'Road Closures', path: '/police/closures', icon: Sliders },
+        { label: 'Traffic Analytics', path: '/police/history', icon: Clock },
         { label: 'Priority Queue', path: '/police/queue', icon: Radio },
         { label: 'Incident Review', path: '/police/incidents', icon: AlertTriangle },
-        { label: 'Road Closures', path: '/police/closures', icon: Sliders },
         { label: 'Zone Monitoring', path: '/police/zones', icon: Layers },
         { label: 'Traffic Advisories', path: '/police/advisories', icon: FileText },
         { label: 'Officer Shifts', path: '/police/shifts', icon: Calendar }
@@ -88,8 +92,9 @@ export const Sidebar = () => {
       icon: Ambulance,
       navItems: [
         { label: 'Dispatch Console', path: '/emergency', icon: Activity, exact: true },
-        { label: 'Active Dispatches', path: '/emergency/active', icon: Ambulance },
+        { label: 'Live Grid Map', path: '/emergency/map', icon: MapPin },
         { label: 'Priority Routing', path: '/emergency/routing', icon: Navigation },
+        { label: 'Active Dispatches', path: '/emergency/active', icon: Ambulance },
         { label: 'Corridor Safety', path: '/emergency/coordination', icon: Compass }
       ]
     },
@@ -110,6 +115,9 @@ export const Sidebar = () => {
       icon: Shield,
       navItems: [
         { label: 'City Operations', path: '/admin', icon: Activity, exact: true },
+        { label: 'Live Traffic Map', path: '/admin/map', icon: MapPin },
+        { label: 'Road Closures', path: '/admin/closures', icon: Sliders },
+        { label: 'Traffic Analytics', path: '/admin/history', icon: Clock },
         { label: 'Incident Records', path: '/admin/incidents', icon: AlertTriangle },
         { label: 'User Management', path: '/admin/users', icon: Users },
         { label: 'Officer Approvals', path: '/admin/approvals', icon: CheckCircle },

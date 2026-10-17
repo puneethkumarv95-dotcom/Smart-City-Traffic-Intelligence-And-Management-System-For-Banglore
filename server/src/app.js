@@ -7,6 +7,9 @@ const errorHandler = require('./middleware/errorHandler');
 const { authenticate, authorize } = require('./middleware/auth');
 const authRoutes = require('./routes/authRoutes');
 const incidentRoutes = require('./routes/incidentRoutes');
+const trafficRoutes = require('./routes/trafficRoutes');
+const savedRouteRoutes = require('./routes/savedRouteRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 const incidentController = require('./controllers/incidentController');
 const logger = require('./utils/logger');
 
@@ -80,6 +83,9 @@ app.get('/api/health', (req, res) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/incidents', incidentRoutes);
+app.use('/api/traffic', trafficRoutes);
+app.use('/api/routes/saved', savedRouteRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Super Admin Direct Incident Statistics API
 app.get(

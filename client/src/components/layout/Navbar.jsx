@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useUIStore } from '../../store/useUIStore';
+import trafficService from '../../services/trafficService';
 import {
   Bell,
   Search,
@@ -18,7 +19,49 @@ export const Navbar = () => {
   const { toggleMobileSidebar } = useUIStore();
   const [profileOpen, setProfileOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [currentTime, setCurrentTime] = useState('');
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      if (!user) return;
+      try {
+        const res = await trafficService.getNotifications();
+        if (res?.data) {
+          setNotifications(res.data);
+          setUnreadCount(res.unreadCount || res.data.filter((n) => !n.isRead).length);
+        }
+      } catch (err) {
+        // Silently catch in navbar
+      }
+    };
+
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [user]);
+
+  const handleMarkAllRead = async () => {
+    try {
+      await trafficService.markAllNotificationsRead();
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      setUnreadCount(0);
+    } catch (err) {
+      console.error('Failed to mark all as read:', err);
+    }
+  };
+
+  const handleMarkOneRead = async (id) => {
+    try {
+      await trafficService.markNotificationRead(id);
+      setNotifications((prev) =>
+        prev.map((n) => (n._id === id ? { ...n, isRead: true } : n))
+      );
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+    } catch (err) {
+      console.error('Failed to mark notification read:', err);
+    }
+  };
 
   useEffect(() => {
     const updateTime = () => {
@@ -55,7 +98,7 @@ export const Navbar = () => {
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Search intersections, incidents, parking..."
+            placeholder="Search corridors, incidents, alerts..."
             className="w-full pl-9 pr-4 py-2 bg-city-surface/60 border border-city-border rounded-xl text-xs text-slate-200 placeholder:text-slate-400 focus:outline-none focus:border-electric focus:ring-1 focus:ring-electric transition-all"
           />
         </div>
@@ -86,31 +129,71 @@ export const Navbar = () => {
             title="Notifications"
           >
             <Bell className="w-4 h-4" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full animate-ping"></span>
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full"></span>
+            {unreadCount > 0 && (
+              <>
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full animate-ping"></span>
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full"></span>
+              </>
+            )}
           </button>
 
           {notificationsOpen && (
-            <div className="absolute right-0 mt-2 w-80 bg-city-card border border-city-border rounded-2xl shadow-2xl p-4 z-50">
+            <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-city-card border border-city-border rounded-2xl shadow-2xl p-4 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
               <div className="flex items-center justify-between pb-3 border-b border-city-border">
-                <h4 className="text-xs font-semibold text-white uppercase tracking-wider">
-                  Live Incident Alerts
-                </h4>
-                <span className="text-[10px] bg-electric/20 text-electric-light px-2 py-0.5 rounded-full font-mono">
-                  3 New
-                </span>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-xs font-semibold text-white uppercase tracking-wider">
+                    Grid Alerts & Advisories
+                  </h4>
+                  {unreadCount > 0 && (
+                    <span className="text-[10px] bg-rose-500/20 text-rose-400 border border-rose-500/30 px-2 py-0.5 rounded-full font-mono">
+                      {unreadCount} New
+                    </span>
+                  )}
+                </div>
+                {unreadCount > 0 && (
+                  <button
+                    onClick={handleMarkAllRead}
+                    className="text-[10px] text-electric-light hover:underline font-mono"
+                  >
+                    Mark all read
+                  </button>
+                )}
               </div>
-              <div className="py-2 space-y-2 text-xs">
-                <div className="p-2.5 rounded-xl bg-city-surface/60 hover:bg-city-hover cursor-pointer border border-city-border/40 transition-colors">
-                  <p className="font-semibold text-slate-200">Hebbal Flyover Congestion</p>
-                  <p className="text-[11px] text-slate-400">High volume bottleneck towards Airport corridor.</p>
-                  <span className="text-[10px] text-slate-400 font-mono mt-1 block">2 mins ago</span>
-                </div>
-                <div className="p-2.5 rounded-xl bg-city-surface/60 hover:bg-city-hover cursor-pointer border border-city-border/40 transition-colors">
-                  <p className="font-semibold text-slate-200">Silk Board Road Repair</p>
-                  <p className="text-[11px] text-slate-400">Right lane diversion in effect towards HSR.</p>
-                  <span className="text-[10px] text-slate-400 font-mono mt-1 block">14 mins ago</span>
-                </div>
+              <div className="py-2 space-y-2 max-h-80 overflow-y-auto">
+                {notifications.length === 0 ? (
+                  <p className="text-xs text-slate-400 py-4 text-center">No active notifications</p>
+                ) : (
+                  notifications.slice(0, 6).map((n) => (
+                    <div
+                      key={n._id}
+                      onClick={() => handleMarkOneRead(n._id)}
+                      className={`p-2.5 rounded-xl border cursor-pointer transition-colors ${
+                        n.isRead
+                          ? 'bg-city-surface/40 border-city-border/30 opacity-70'
+                          : 'bg-city-surface/80 border-electric/40 hover:border-electric'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <p className="font-semibold text-xs text-slate-200">{n.title}</p>
+                        <span
+                          className={`text-[9px] uppercase px-1.5 py-0.5 rounded font-mono ${
+                            n.severity === 'critical'
+                              ? 'bg-rose-500/20 text-rose-400'
+                              : n.severity === 'high'
+                              ? 'bg-amber-500/20 text-amber-400'
+                              : 'bg-blue-500/20 text-blue-400'
+                          }`}
+                        >
+                          {n.severity}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-1 line-clamp-2">{n.message}</p>
+                      <span className="text-[10px] text-slate-400 font-mono mt-1.5 block">
+                        {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           )}
