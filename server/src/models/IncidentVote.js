@@ -33,3 +33,4 @@ const incidentVoteSchema = new mongoose.Schema(
 incidentVoteSchema.index({ incident: 1, user: 1 }, { unique: true });
 
 module.exports = mongoose.model('IncidentVote', incidentVoteSchema);
+

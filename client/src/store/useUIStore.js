@@ -5,3 +5,4 @@ export const useUIStore = create((set) => ({
   setMobileSidebarOpen: (open) => set({ mobileSidebarOpen: open }),
   toggleMobileSidebar: () => set((state) => ({ mobileSidebarOpen: !state.mobileSidebarOpen }))
 }));
+

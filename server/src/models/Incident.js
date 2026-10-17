@@ -2,6 +2,25 @@ const mongoose = require('mongoose');
 
 const incidentSchema = new mongoose.Schema(
   {
+    incidentId: {
+      type: String,
+      unique: true,
+      index: true
+    },
+    reportedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+      index: true
+    },
+    isAnonymous: {
+      type: Boolean,
+      default: false
+    },
+    reporterIp: {
+      type: String,
+      default: ''
+    },
     title: {
       type: String,
       required: [true, 'Incident title is required'],
@@ -9,28 +28,38 @@ const incidentSchema = new mongoose.Schema(
       minlength: 5,
       maxlength: 150
     },
-    category: {
-      type: String,
-      required: [true, 'Category is required'],
-      enum: [
-        'accident',
-        'pothole',
-        'traffic_jam',
-        'flooding',
-        'signal_failure',
-        'road_closure',
-        'illegal_parking',
-        'road_damage',
-        'other'
-      ],
-      index: true
-    },
     description: {
       type: String,
       required: [true, 'Description is required'],
       trim: true,
       minlength: 10,
       maxlength: 2000
+    },
+    category: {
+      type: String,
+      required: [true, 'Category is required'],
+      enum: [
+        'Road Accident',
+        'Traffic Congestion',
+        'Pothole',
+        'Road Damage',
+        'Broken Traffic Signal',
+        'Illegal Parking',
+        'Road Flooding',
+        'Road Closure',
+        'Other',
+        // Also support lowercase slugs for flexible API backwards compatibility
+        'accident',
+        'traffic_jam',
+        'pothole',
+        'road_damage',
+        'signal_failure',
+        'illegal_parking',
+        'flooding',
+        'road_closure',
+        'other'
+      ],
+      index: true
     },
     severity: {
       type: String,
@@ -55,26 +84,30 @@ const incidentSchema = new mongoose.Schema(
       required: [true, 'Address or street landmark is required'],
       trim: true
     },
+    city: {
+      type: String,
+      default: 'Bengaluru'
+    },
     zone: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'CityZone',
       default: null,
       index: true
     },
-    reportedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      default: null,
-      index: true
-    },
-    isAnonymous: {
-      type: Boolean,
-      default: false
-    },
-    reporterIp: {
-      type: String,
-      default: ''
-    },
+    images: [
+      {
+        url: { type: String, required: true },
+        publicId: { type: String, default: '' },
+        caption: { type: String, default: '' }
+      }
+    ],
+    videos: [
+      {
+        url: { type: String, required: true },
+        publicId: { type: String, default: '' },
+        caption: { type: String, default: '' }
+      }
+    ],
     status: {
       type: String,
       enum: [
@@ -85,85 +118,83 @@ const incidentSchema = new mongoose.Schema(
         'in_progress',
         'resolved',
         'rejected',
-        'duplicate'
+        'duplicate',
+        'info_requested'
       ],
       default: 'submitted',
       index: true
     },
-    media: [
-      {
-        url: { type: String, required: true },
-        mediaType: { type: String, enum: ['image', 'video'], default: 'image' },
-        publicId: { type: String, default: '' },
-        caption: { type: String, default: '' }
-      }
-    ],
-    verifiedBy: {
-      officer: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
-      officerName: { type: String, default: '' },
-      verifiedAt: { type: Date, default: null },
-      notes: { type: String, default: '' }
+    verificationStatus: {
+      type: String,
+      enum: ['pending', 'verified', 'rejected', 'info_requested'],
+      default: 'pending',
+      index: true
     },
-    rejectedBy: {
-      officer: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
-      officerName: { type: String, default: '' },
-      rejectedAt: { type: Date, default: null },
-      reason: { type: String, default: '' }
+    assignedOfficer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+      index: true
     },
-    assignedTo: {
-      officer: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
-      officerName: { type: String, default: '' },
-      department: { type: String, default: '' },
-      assignedAt: { type: Date, default: null },
-      notes: { type: String, default: '' }
+    duplicateOf: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Incident',
+      default: null,
+      index: true
     },
-    resolutionDetails: {
-      notes: { type: String, default: '' },
-      resolvedAt: { type: Date, default: null },
-      resolvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }
+    confirmationsCount: {
+      type: Number,
+      default: 0
+    },
+    disputesCount: {
+      type: Number,
+      default: 0
+    },
+    resolvedAt: {
+      type: Date,
+      default: null
+    },
+    resolutionNotes: {
+      type: String,
+      default: ''
     },
     citizenFeedback: {
       rating: { type: Number, min: 1, max: 5, default: null },
       comments: { type: String, default: '' },
       submittedAt: { type: Date, default: null }
     },
-    confirmVotesCount: {
-      type: Number,
-      default: 0
-    },
-    disputeVotesCount: {
-      type: Number,
-      default: 0
-    },
     expiresAt: {
       type: Date,
-      default: () => new Date(Date.now() + 48 * 60 * 60 * 1000), // Default 48h expiration
+      default: () => new Date(Date.now() + 48 * 60 * 60 * 1000),
       index: true
     },
     isArchived: {
       type: Boolean,
       default: false,
       index: true
-    },
-    statusHistory: [
-      {
-        status: { type: String, required: true },
-        changedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
-        changedByName: { type: String, default: 'System' },
-        actorRole: { type: String, default: 'system' },
-        timestamp: { type: Date, default: Date.now },
-        notes: { type: String, default: '' }
-      }
-    ]
+    }
   },
   {
     timestamps: true
   }
 );
 
-// 2dsphere spatial index for geospatial radius & nearest queries
+// Auto-generate unique public identifier (e.g. INC-202610-8472)
+incidentSchema.pre('validate', async function (next) {
+  if (!this.incidentId) {
+    const yearMonth = new Date().toISOString().slice(0, 7).replace('-', '');
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    this.incidentId = `INC-${yearMonth}-${randomSuffix}`;
+  }
+  next();
+});
+
+// Indexes for high performance querying
 incidentSchema.index({ location: '2dsphere' });
 incidentSchema.index({ createdAt: -1 });
 incidentSchema.index({ severity: 1, status: 1 });
+incidentSchema.index({ category: 1, status: 1 });
+incidentSchema.index({ zone: 1, status: 1 });
+incidentSchema.index({ reportedBy: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Incident', incidentSchema);

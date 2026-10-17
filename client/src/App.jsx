@@ -18,8 +18,10 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 
 // Phase 2 Modules
 import ReportIncidentPage from './pages/citizen/ReportIncidentPage';
+import MyReportsPage from './pages/citizen/MyReportsPage';
 import ComplaintTrackingPage from './pages/citizen/ComplaintTrackingPage';
 import IncidentReviewPage from './pages/police/IncidentReviewPage';
+import AdminIncidentManagement from './pages/admin/AdminIncidentManagement';
 
 export function App() {
   const { fetchCurrentUser } = useAuthStore();
@@ -47,6 +49,7 @@ export function App() {
         >
           <Route index element={<CitizenDashboard />} />
           <Route path="report" element={<ReportIncidentPage />} />
+          <Route path="my-reports" element={<MyReportsPage />} />
           <Route path="complaints" element={<ComplaintTrackingPage />} />
           <Route path="map" element={<CitizenDashboard />} />
           <Route path="routes" element={<CitizenDashboard />} />
@@ -113,6 +116,7 @@ export function App() {
           }
         >
           <Route index element={<AdminDashboard />} />
+          <Route path="incidents" element={<AdminIncidentManagement />} />
           <Route path="users" element={<AdminDashboard />} />
           <Route path="approvals" element={<AdminDashboard />} />
           <Route path="zones" element={<AdminDashboard />} />

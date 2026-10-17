@@ -4,8 +4,10 @@ const helmet = require('helmet');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
 const errorHandler = require('./middleware/errorHandler');
+const { authenticate, authorize } = require('./middleware/auth');
 const authRoutes = require('./routes/authRoutes');
 const incidentRoutes = require('./routes/incidentRoutes');
+const incidentController = require('./controllers/incidentController');
 const logger = require('./utils/logger');
 
 const app = express();
@@ -78,6 +80,14 @@ app.get('/api/health', (req, res) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/incidents', incidentRoutes);
+
+// Super Admin Direct Incident Statistics API
+app.get(
+  '/api/admin/incidents/statistics',
+  authenticate,
+  authorize('admin'),
+  incidentController.getAdminIncidentStatistics
+);
 
 // 404 Handler
 app.use((req, res) => {

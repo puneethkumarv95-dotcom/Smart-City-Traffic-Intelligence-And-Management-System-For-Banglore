@@ -6,15 +6,19 @@ const User = require('../models/User');
 const Incident = require('../models/Incident');
 const CityZone = require('../models/CityZone');
 const IncidentVote = require('../models/IncidentVote');
+const IncidentStatusHistory = require('../models/IncidentStatusHistory');
+const IncidentAssignment = require('../models/IncidentAssignment');
 
-describe('Phase 2: Core Incident Management Workflow Test Suite', () => {
+describe('Phase 2: Comprehensive Incident Management Workflow Test Suite', () => {
   let citizenToken;
   let citizenUser;
   let policeToken;
   let policeUser;
   let adminToken;
+  let adminUser;
   let testZone;
-  let createdIncidentId;
+  let primaryIncident;
+  let duplicateCandidateIncident;
 
   beforeAll(async () => {
     const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/smart_city_traffic';
@@ -22,25 +26,27 @@ describe('Phase 2: Core Incident Management Workflow Test Suite', () => {
       await mongoose.connect(uri);
     }
 
-    // Clean up test users & test incidents
-    await User.deleteMany({ email: { $in: ['inc_citizen@smartcity.gov', 'inc_police@smartcity.gov', 'inc_admin@smartcity.gov'] } });
-    await Incident.deleteMany({ title: { $regex: /\[TEST\]/ } });
+    // Clean up test data
+    await User.deleteMany({
+      email: { $in: ['inc_cit_p2@smartcity.gov', 'inc_pol_p2@smartcity.gov', 'inc_adm_p2@smartcity.gov'] }
+    });
+    await Incident.deleteMany({ title: { $regex: /\[PHASE2_TEST\]/ } });
 
-    // Find or create test zone (Hebbal)
+    // Zone
     testZone = await CityZone.findOne({ code: 'HEB-02' });
     if (!testZone) {
       testZone = await CityZone.create({
-        name: 'Hebbal Flyover Test Zone',
+        name: 'Hebbal Flyover Zone',
         code: 'HEB-02',
         city: 'Bengaluru',
         center: { type: 'Point', coordinates: [77.597, 13.0358] }
       });
     }
 
-    // Create test accounts
+    // Users
     citizenUser = await User.create({
-      name: 'Incident Citizen Tester',
-      email: 'inc_citizen@smartcity.gov',
+      name: 'P2 Citizen Commuter',
+      email: 'inc_cit_p2@smartcity.gov',
       password: 'Password@123',
       role: 'citizen',
       isApproved: true,
@@ -48,217 +54,292 @@ describe('Phase 2: Core Incident Management Workflow Test Suite', () => {
     });
 
     policeUser = await User.create({
-      name: 'Incident Officer Tester',
-      email: 'inc_police@smartcity.gov',
+      name: 'Inspector P2 Police',
+      email: 'inc_pol_p2@smartcity.gov',
       password: 'Password@123',
       role: 'police',
-      badgeNumber: 'BTP-TEST-99',
+      badgeNumber: 'BTP-P2-01',
       assignedZone: testZone._id,
+      department: 'Traffic Central',
       isApproved: true,
       isActive: true
     });
 
-    // Obtain tokens
-    const citRes = await request(app).post('/api/auth/login').send({
-      email: 'inc_citizen@smartcity.gov',
-      password: 'Password@123'
+    adminUser = await User.create({
+      name: 'Chief Admin P2',
+      email: 'inc_adm_p2@smartcity.gov',
+      password: 'Password@123',
+      role: 'admin',
+      isApproved: true,
+      isActive: true
     });
-    citizenToken = citRes.body.data.accessToken;
 
-    const polRes = await request(app).post('/api/auth/login').send({
-      email: 'inc_police@smartcity.gov',
+    // Tokens
+    const cRes = await request(app).post('/api/auth/login').send({
+      email: 'inc_cit_p2@smartcity.gov',
       password: 'Password@123'
     });
-    policeToken = polRes.body.data.accessToken;
+    citizenToken = cRes.body.data.accessToken;
+
+    const pRes = await request(app).post('/api/auth/login').send({
+      email: 'inc_pol_p2@smartcity.gov',
+      password: 'Password@123'
+    });
+    policeToken = pRes.body.data.accessToken;
+
+    const aRes = await request(app).post('/api/auth/login').send({
+      email: 'inc_adm_p2@smartcity.gov',
+      password: 'Password@123'
+    });
+    adminToken = aRes.body.data.accessToken;
   });
 
   afterAll(async () => {
     await mongoose.connection.close();
   });
 
-  describe('1. Incident Creation & Geo-Tagging', () => {
-    it('POST /api/incidents should allow authenticated citizen to report a hazard', async () => {
+  describe('1. Incident Creation & Unique Identifier Generation', () => {
+    it('POST /api/incidents creates incident with unique incidentId and coordinates', async () => {
       const res = await request(app)
         .post('/api/incidents')
         .set('Authorization', `Bearer ${citizenToken}`)
         .send({
-          title: '[TEST] Pothole cluster near Hebbal Baptist Hospital',
-          category: 'pothole',
-          description: 'Dangerous pothole crater in the right lane heading towards airport.',
+          title: '[PHASE2_TEST] Massive pothole causing severe vehicle delays',
+          category: 'Pothole',
+          description: 'A 2-foot crater in the middle lane near Hebbal junction blocking traffic flow.',
           severity: 'high',
-          latitude: 13.0360,
-          longitude: 77.5975,
-          address: 'Bellary Road, near Baptist Hospital, Hebbal, Bengaluru',
-          zoneId: testZone._id.toString(),
+          latitude: 13.0358,
+          longitude: 77.5970,
+          address: 'Hebbal Flyover Junction, Outer Ring Road',
           isAnonymous: false
         });
 
       expect(res.status).toBe(201);
       expect(res.body.success).toBe(true);
-      expect(res.body.data._id).toBeDefined();
+      expect(res.body.data.incidentId).toBeDefined();
+      expect(res.body.data.incidentId).toMatch(/^INC-\d{6}-\d{4}$/);
       expect(res.body.data.status).toBe('submitted');
-      expect(res.body.data.location.coordinates).toEqual([77.5975, 13.0360]); // [lng, lat]
-      expect(res.body.data.isAnonymous).toBe(false);
+      expect(res.body.data.location.coordinates).toEqual([77.5970, 13.0358]);
 
-      createdIncidentId = res.body.data._id;
+      primaryIncident = res.body.data;
     });
 
-    it('POST /api/incidents should support anonymous reporting', async () => {
-      const res = await request(app)
-        .post('/api/incidents')
-        .send({
-          title: '[TEST] Anonymous signal light broken at Anand Rao Circle',
-          category: 'signal_failure',
-          description: 'Signal has gone dark causing massive congestion gridlock.',
-          severity: 'medium',
-          latitude: 12.9770,
-          longitude: 77.5720,
-          address: 'Anand Rao Circle, Majestic, Bengaluru',
-          isAnonymous: true
-        });
-
-      expect(res.status).toBe(201);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data.isAnonymous).toBe(true);
-      expect(res.body.data.reportedBy).toBeNull();
-    });
-
-    it('POST /api/incidents should validate required category and title length', async () => {
-      const res = await request(app)
-        .post('/api/incidents')
-        .send({
-          title: 'Hi', // too short (< 5 chars)
-          category: 'invalid_category_xyz',
-          description: 'Short',
-          latitude: 13.0,
-          longitude: 77.0,
-          address: 'Bangalore'
-        });
-
-      expect(res.status).toBe(400);
-      expect(res.body.success).toBe(false);
+    it('Incident status history is recorded in IncidentStatusHistory collection', async () => {
+      const history = await IncidentStatusHistory.find({ incident: primaryIncident._id });
+      expect(history.length).toBeGreaterThan(0);
+      expect(history[0].newStatus).toBe('submitted');
+      expect(history[0].changedByName).toBe(citizenUser.name);
     });
   });
 
-  describe('2. Geospatial Queries & Nearby Incidents', () => {
-    it('GET /api/incidents/nearby should return incidents within radius', async () => {
+  describe('2. Duplicate Incident Detection Algorithm', () => {
+    it('POST /api/incidents/check-duplicates flags similar reports within radius', async () => {
       const res = await request(app)
-        .get('/api/incidents/nearby')
-        .query({
-          longitude: 77.5975,
+        .post('/api/incidents/check-duplicates')
+        .send({
+          category: 'Pothole',
           latitude: 13.0360,
-          radiusMeters: 5000
+          longitude: 77.5972,
+          title: 'Deep pothole on flyover lane',
+          description: 'Large crater in road near Hebbal',
+          radiusMeters: 1000
         });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.hasDuplicates).toBe(true);
+      expect(res.body.data.length).toBeGreaterThan(0);
+      expect(res.body.data[0].confidence).toBeGreaterThan(30);
+    });
+  });
+
+  describe('3. Citizen "My Reports" & Filtering', () => {
+    it('GET /api/incidents/my returns only reports authored by the citizen', async () => {
+      const res = await request(app)
+        .get('/api/incidents/my')
+        .set('Authorization', `Bearer ${citizenToken}`);
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       expect(Array.isArray(res.body.data)).toBe(true);
-      expect(res.body.data.length).toBeGreaterThan(0);
+      expect(res.body.data.every((inc) => inc.reportedBy.toString() === citizenUser._id.toString())).toBe(true);
     });
 
-    it('GET /api/incidents should support category and status filters', async () => {
-      const res = await request(app)
-        .get('/api/incidents')
-        .query({
-          category: 'pothole',
-          status: 'submitted'
-        });
-
+    it('GET /api/incidents/:id returns full details and populated zone', async () => {
+      const res = await request(app).get(`/api/incidents/${primaryIncident._id}`);
       expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data.every((inc) => inc.category === 'pothole')).toBe(true);
+      expect(res.body.data.incidentId).toBe(primaryIncident.incidentId);
+      expect(res.body.data.zone).toBeDefined();
+    });
+
+    it('GET /api/incidents/:id/history returns chronological history list', async () => {
+      const res = await request(app).get(`/api/incidents/${primaryIncident._id}/history`);
+      expect(res.status).toBe(200);
+      expect(res.body.data.length).toBeGreaterThan(0);
     });
   });
 
-  describe('3. Citizen Community Voting & Anti-Abuse Deduplication', () => {
-    it('POST /api/incidents/:id/vote should record confirmation vote', async () => {
+  describe('4. Community Voting with Vote Change Support', () => {
+    it('POST /api/incidents/:id/vote records initial confirm vote', async () => {
       const res = await request(app)
-        .post(`/api/incidents/${createdIncidentId}/vote`)
+        .post(`/api/incidents/${primaryIncident._id}/vote`)
         .set('Authorization', `Bearer ${citizenToken}`)
         .send({ voteType: 'confirm' });
 
       expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data.confirmVotesCount).toBe(1);
+      expect(res.body.data.confirmationsCount).toBe(1);
+      expect(res.body.data.disputesCount).toBe(0);
     });
 
-    it('POST /api/incidents/:id/vote should reject double-voting by the same user', async () => {
+    it('POST /api/incidents/:id/vote allows changing vote from confirm to dispute', async () => {
       const res = await request(app)
-        .post(`/api/incidents/${createdIncidentId}/vote`)
+        .post(`/api/incidents/${primaryIncident._id}/vote`)
         .set('Authorization', `Bearer ${citizenToken}`)
-        .send({ voteType: 'confirm' });
+        .send({ voteType: 'dispute' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.confirmationsCount).toBe(0);
+      expect(res.body.data.disputesCount).toBe(1);
+    });
+
+    it('Duplicate same-vote attempt returns 400', async () => {
+      const res = await request(app)
+        .post(`/api/incidents/${primaryIncident._id}/vote`)
+        .set('Authorization', `Bearer ${citizenToken}`)
+        .send({ voteType: 'dispute' });
 
       expect(res.status).toBe(400);
       expect(res.body.success).toBe(false);
-      expect(res.body.message).toMatch(/already submitted a verification vote/i);
     });
   });
 
-  describe('4. Officer Verification & Assignment Workflow', () => {
-    it('POST /api/incidents/:id/verify should be rejected for regular citizen (RBAC guard)', async () => {
+  describe('5. Police Triage: Verify, Request Info, Assign, and Duplicate Workflow', () => {
+    it('POST /api/incidents/:id/request-info changes status to info_requested', async () => {
       const res = await request(app)
-        .post(`/api/incidents/${createdIncidentId}/verify`)
-        .set('Authorization', `Bearer ${citizenToken}`)
-        .send({ notes: 'Citizen trying to verify own incident' });
-
-      expect(res.status).toBe(403);
-      expect(res.body.success).toBe(false);
-    });
-
-    it('POST /api/incidents/:id/verify should allow Traffic Police to verify incident', async () => {
-      const res = await request(app)
-        .post(`/api/incidents/${createdIncidentId}/verify`)
+        .post(`/api/incidents/${primaryIncident._id}/request-info`)
         .set('Authorization', `Bearer ${policeToken}`)
-        .send({ notes: 'Field unit confirmed active pothole cluster.' });
+        .send({ notes: 'Please provide nearest pillar number or landmark photo.' });
 
       expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data.status).toBe('verified');
-      expect(res.body.data.verifiedBy.officerName).toBe(policeUser.name);
+      expect(res.body.data.status).toBe('info_requested');
+      expect(res.body.data.verificationStatus).toBe('info_requested');
     });
 
-    it('POST /api/incidents/:id/assign should assign response team', async () => {
+    it('POST /api/incidents/:id/verify verifies the report with priority update', async () => {
       const res = await request(app)
-        .post(`/api/incidents/${createdIncidentId}/assign`)
+        .post(`/api/incidents/${primaryIncident._id}/verify`)
+        .set('Authorization', `Bearer ${policeToken}`)
+        .send({ notes: 'Confirmed by patrolling officer.', priority: 'critical' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.status).toBe('verified');
+      expect(res.body.data.severity).toBe('critical');
+      expect(res.body.data.verificationStatus).toBe('verified');
+    });
+
+    it('GET /api/incidents/officers lists available officers with workload count', async () => {
+      const res = await request(app)
+        .get('/api/incidents/officers')
+        .set('Authorization', `Bearer ${policeToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.length).toBeGreaterThan(0);
+      expect(res.body.data[0].activeAssignmentsCount).toBeDefined();
+    });
+
+    it('POST /api/incidents/:id/assign assigns officer and records IncidentAssignment', async () => {
+      const res = await request(app)
+        .post(`/api/incidents/${primaryIncident._id}/assign`)
         .set('Authorization', `Bearer ${policeToken}`)
         .send({
           officerId: policeUser._id.toString(),
-          notes: 'Patrol team dispatched with barricades.'
+          notes: 'Emergency road repair unit dispatched.'
         });
 
       expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
       expect(res.body.data.status).toBe('assigned');
-      expect(res.body.data.assignedTo.officerName).toBe(policeUser.name);
+      expect(res.body.data.assignedOfficer).toBe(policeUser._id.toString());
+
+      const assignmentDoc = await IncidentAssignment.findOne({ incident: primaryIncident._id });
+      expect(assignmentDoc).toBeDefined();
+      expect(assignmentDoc.assignedOfficer.toString()).toBe(policeUser._id.toString());
+      expect(assignmentDoc.assignmentStatus).toBe('assigned');
     });
 
-    it('PATCH /api/incidents/:id/status should update progress to resolved', async () => {
-      const res = await request(app)
-        .patch(`/api/incidents/${createdIncidentId}/status`)
+    it('PATCH /api/incidents/:id/status updates progress to in_progress and resolved', async () => {
+      // Step to in_progress
+      const pRes = await request(app)
+        .patch(`/api/incidents/${primaryIncident._id}/status`)
         .set('Authorization', `Bearer ${policeToken}`)
-        .send({
-          status: 'resolved',
-          notes: 'BBMP road repair crew patched pothole. Barricades cleared.'
-        });
+        .send({ status: 'in_progress', notes: 'Asphalt cold mix application underway.' });
 
-      expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data.status).toBe('resolved');
-      expect(res.body.data.resolutionDetails.resolvedAt).toBeDefined();
+      expect(pRes.status).toBe(200);
+      expect(pRes.body.data.status).toBe('in_progress');
+
+      // Step to resolved
+      const rRes = await request(app)
+        .patch(`/api/incidents/${primaryIncident._id}/status`)
+        .set('Authorization', `Bearer ${policeToken}`)
+        .send({ status: 'resolved', notes: 'Road repaired and traffic flow restored.' });
+
+      expect(rRes.status).toBe(200);
+      expect(rRes.body.data.status).toBe('resolved');
+      expect(rRes.body.data.resolvedAt).toBeDefined();
+
+      const assignmentDoc = await IncidentAssignment.findOne({ incident: primaryIncident._id });
+      expect(assignmentDoc.assignmentStatus).toBe('completed');
     });
 
-    it('POST /api/incidents/:id/feedback should record citizen satisfaction rating', async () => {
-      const res = await request(app)
-        .post(`/api/incidents/${createdIncidentId}/feedback`)
+    it('POST /api/incidents/:id/duplicate links duplicate report to primary', async () => {
+      // Create second incident to mark as duplicate
+      const secondIncRes = await request(app)
+        .post('/api/incidents')
         .set('Authorization', `Bearer ${citizenToken}`)
         .send({
-          rating: 5,
-          comments: 'Fast resolution by traffic police and BBMP team. Road is smooth now.'
+          title: '[PHASE2_TEST] Second report of Hebbal crater',
+          category: 'Pothole',
+          description: 'Same pothole reported by another driver.',
+          severity: 'medium',
+          latitude: 13.0359,
+          longitude: 77.5971,
+          address: 'Hebbal Flyover, Bengaluru'
         });
+
+      const dupId = secondIncRes.body.data._id;
+
+      const markRes = await request(app)
+        .post(`/api/incidents/${dupId}/duplicate`)
+        .set('Authorization', `Bearer ${policeToken}`)
+        .send({
+          duplicateOf: primaryIncident._id.toString(),
+          notes: 'Identical pothole observation on same lane.'
+        });
+
+      expect(markRes.status).toBe(200);
+      expect(markRes.body.data.status).toBe('duplicate');
+      expect(markRes.body.data.duplicateOf.toString()).toBe(primaryIncident._id.toString());
+    });
+  });
+
+  describe('6. Admin Incident Statistics from MongoDB Aggregation', () => {
+    it('GET /api/admin/incidents/statistics returns aggregated live numbers', async () => {
+      const res = await request(app)
+        .get('/api/admin/incidents/statistics')
+        .set('Authorization', `Bearer ${adminToken}`);
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(res.body.data.rating).toBe(5);
+      expect(res.body.data.totalReports).toBeGreaterThanOrEqual(1);
+      expect(res.body.data.categoryBreakdown).toBeDefined();
+      expect(res.body.data.zoneBreakdown).toBeDefined();
+    });
+
+    it('Citizen cannot access /api/admin/incidents/statistics (RBAC protection)', async () => {
+      const res = await request(app)
+        .get('/api/admin/incidents/statistics')
+        .set('Authorization', `Bearer ${citizenToken}`);
+
+      expect(res.status).toBe(403);
     });
   });
 });

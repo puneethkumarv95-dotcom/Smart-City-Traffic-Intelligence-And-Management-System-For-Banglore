@@ -60,7 +60,8 @@ export const Sidebar = () => {
         { label: 'City Dashboard', path: '/citizen', icon: Activity, exact: true },
         { label: 'Live Traffic Map', path: '/citizen/map', icon: MapPin },
         { label: 'Report Incident', path: '/citizen/report', icon: AlertTriangle },
-        { label: 'My Complaints', path: '/citizen/complaints', icon: FileText },
+        { label: 'My Reports', path: '/citizen/my-reports', icon: FileText },
+        { label: 'Community Feed', path: '/citizen/complaints', icon: Layers },
         { label: 'Saved Routes', path: '/citizen/routes', icon: Bookmark },
         { label: 'Smart Parking', path: '/citizen/parking', icon: Car },
         { label: 'Emergency SOS', path: '/citizen/sos', icon: LifeBuoy, highlight: true },
@@ -109,6 +110,7 @@ export const Sidebar = () => {
       icon: Shield,
       navItems: [
         { label: 'City Operations', path: '/admin', icon: Activity, exact: true },
+        { label: 'Incident Records', path: '/admin/incidents', icon: AlertTriangle },
         { label: 'User Management', path: '/admin/users', icon: Users },
         { label: 'Officer Approvals', path: '/admin/approvals', icon: CheckCircle },
         { label: 'Traffic Zones', path: '/admin/zones', icon: Building2 },

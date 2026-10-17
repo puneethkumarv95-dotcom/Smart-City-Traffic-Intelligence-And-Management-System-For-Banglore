@@ -8,13 +8,16 @@ const {
   createIncidentSchema,
   verifyIncidentSchema,
   rejectIncidentSchema,
+  requestInfoSchema,
   assignIncidentSchema,
+  markDuplicateSchema,
   updateStatusSchema,
   voteIncidentSchema,
-  feedbackSchema
+  feedbackSchema,
+  checkDuplicatesSchema
 } = require('../validators/incidentValidators');
 
-// Optional auth middleware: extracts user if token present, but doesn't block unauthenticated reports
+// Optional auth middleware: extracts user if token present
 const optionalAuth = (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -23,7 +26,50 @@ const optionalAuth = (req, res, next) => {
   next();
 };
 
-// Public / Citizen Incident Reporting & Queries
+// -------------------------------------------------------------
+// 1. SPECIFIC STATIC ROUTES (MUST BE BEFORE DYNAMIC /:id ROUTES)
+// -------------------------------------------------------------
+
+// Duplicate detection check
+router.post(
+  '/check-duplicates',
+  validate(checkDuplicatesSchema),
+  incidentController.checkDuplicates
+);
+
+// Citizen's own incident history
+router.get(
+  '/my',
+  authenticate,
+  incidentController.getMyIncidents
+);
+
+// Geospatial nearby search
+router.get(
+  '/nearby',
+  incidentController.getNearbyIncidents
+);
+
+// Available officers with active assignment workload count
+router.get(
+  '/officers',
+  authenticate,
+  authorize('police', 'admin'),
+  incidentController.getAvailableOfficers
+);
+
+// Admin aggregated statistics
+router.get(
+  '/admin/statistics',
+  authenticate,
+  authorize('admin'),
+  incidentController.getAdminIncidentStatistics
+);
+
+// -------------------------------------------------------------
+// 2. ROOT INCIDENT ROUTES
+// -------------------------------------------------------------
+
 router.post(
   '/',
   optionalAuth,
@@ -32,11 +78,29 @@ router.post(
   incidentController.createIncident
 );
 
-router.get('/', optionalAuth, incidentController.getIncidents);
-router.get('/nearby', incidentController.getNearbyIncidents);
-router.get('/:id', optionalAuth, incidentController.getIncidentById);
+router.get(
+  '/',
+  optionalAuth,
+  incidentController.getIncidents
+);
 
-// Citizen Actions
+// -------------------------------------------------------------
+// 3. DYNAMIC /:id INCIDENT ROUTES
+// -------------------------------------------------------------
+
+router.get(
+  '/:id',
+  optionalAuth,
+  incidentController.getIncidentById
+);
+
+router.get(
+  '/:id/history',
+  optionalAuth,
+  incidentController.getIncidentHistory
+);
+
+// Citizen Voting & Feedback
 router.post(
   '/:id/vote',
   authenticate,
@@ -51,7 +115,7 @@ router.post(
   incidentController.submitFeedback
 );
 
-// Police & Administrator Operational Actions
+// Police & Admin Operational Actions
 router.post(
   '/:id/verify',
   authenticate,
@@ -69,11 +133,27 @@ router.post(
 );
 
 router.post(
+  '/:id/request-info',
+  authenticate,
+  authorize('police', 'admin'),
+  validate(requestInfoSchema),
+  incidentController.requestAdditionalInfo
+);
+
+router.post(
   '/:id/assign',
   authenticate,
   authorize('police', 'admin'),
   validate(assignIncidentSchema),
   incidentController.assignIncident
+);
+
+router.post(
+  '/:id/duplicate',
+  authenticate,
+  authorize('police', 'admin'),
+  validate(markDuplicateSchema),
+  incidentController.markDuplicate
 );
 
 router.patch(

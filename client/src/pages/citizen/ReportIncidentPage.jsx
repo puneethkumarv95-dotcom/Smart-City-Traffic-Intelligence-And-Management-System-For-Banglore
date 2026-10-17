@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import incidentService from '../../services/incidentService';
 import LocationPicker from '../../components/map/LocationPicker';
@@ -14,7 +14,10 @@ import {
   EyeOff,
   Navigation,
   ArrowRight,
-  Info
+  Info,
+  Layers,
+  Copy,
+  ThumbsUp
 } from 'lucide-react';
 
 export const ReportIncidentPage = () => {
@@ -24,7 +27,7 @@ export const ReportIncidentPage = () => {
   const [error, setError] = useState(null);
 
   // Form states
-  const [category, setCategory] = useState('pothole');
+  const [category, setCategory] = useState('Pothole');
   const [severity, setSeverity] = useState('medium');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -35,15 +38,21 @@ export const ReportIncidentPage = () => {
   const [mediaFiles, setMediaFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
 
+  // Duplicate candidates state
+  const [duplicates, setDuplicates] = useState([]);
+  const [checkingDuplicates, setCheckingDuplicates] = useState(false);
+  const [acknowledgedDuplicates, setAcknowledgedDuplicates] = useState(false);
+
   const categories = [
-    { id: 'accident', label: 'Road Accident', icon: '🚨' },
-    { id: 'pothole', label: 'Pothole / Crater', icon: '🕳️' },
-    { id: 'traffic_jam', label: 'Severe Gridlock', icon: '🚗' },
-    { id: 'flooding', label: 'Waterlogging / Flood', icon: '🌊' },
-    { id: 'signal_failure', label: 'Broken Signal', icon: '🚦' },
-    { id: 'road_closure', label: 'Unauthorized Closure', icon: '🚧' },
-    { id: 'illegal_parking', label: 'Illegal Parking', icon: '⛔' },
-    { id: 'road_damage', label: 'Debris / Hazard', icon: '⚠️' }
+    { id: 'Road Accident', label: 'Road Accident', icon: '🚨' },
+    { id: 'Pothole', label: 'Pothole / Crater', icon: '🕳️' },
+    { id: 'Traffic Congestion', label: 'Traffic Congestion', icon: '🚗' },
+    { id: 'Road Flooding', label: 'Road Flooding', icon: '🌊' },
+    { id: 'Broken Traffic Signal', label: 'Broken Traffic Signal', icon: '🚦' },
+    { id: 'Road Closure', label: 'Road Closure', icon: '🚧' },
+    { id: 'Illegal Parking', label: 'Illegal Parking', icon: '⛔' },
+    { id: 'Road Damage', label: 'Road Damage', icon: '⚠️' },
+    { id: 'Other', label: 'Other Hazard', icon: '📍' }
   ];
 
   const presets = [
@@ -54,15 +63,48 @@ export const ReportIncidentPage = () => {
     { name: 'Electronic City', lat: 12.8452, lng: 77.6602, addr: 'Electronic City Tollgate Terminus' }
   ];
 
+  // Check for potential duplicate reports
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (latitude && longitude && category) {
+        setCheckingDuplicates(true);
+        try {
+          const res = await incidentService.checkDuplicates({
+            category,
+            latitude,
+            longitude,
+            title,
+            description,
+            radiusMeters: 1200
+          });
+          setDuplicates(res.data || []);
+        } catch (e) {
+          // Ignore background duplicate check errors
+        } finally {
+          setCheckingDuplicates(false);
+        }
+      }
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [category, latitude, longitude, title]);
+
   const handleLocationChange = (lat, lng) => {
     setLatitude(lat);
     setLongitude(lng);
+    setAcknowledgedDuplicates(false);
+  };
+
+  const handleAddressDetected = (detectedAddress) => {
+    if (!address) {
+      setAddress(detectedAddress);
+    }
   };
 
   const handleApplyPreset = (preset) => {
     setLatitude(preset.lat);
     setLongitude(preset.lng);
     setAddress(preset.addr);
+    setAcknowledgedDuplicates(false);
   };
 
   const handleFileChange = (e) => {
@@ -72,10 +114,17 @@ export const ReportIncidentPage = () => {
       return;
     }
 
+    // Validate size and mime
+    for (const f of files) {
+      if (f.size > 15 * 1024 * 1024) {
+        setError(`File "${f.name}" exceeds 15MB limit.`);
+        return;
+      }
+    }
+
     const newFiles = [...mediaFiles, ...files];
     setMediaFiles(newFiles);
 
-    // Create object URLs for previews
     const newPreviews = files.map((file) => ({
       name: file.name,
       type: file.type,
@@ -105,6 +154,7 @@ export const ReportIncidentPage = () => {
       formData.append('latitude', latitude);
       formData.append('longitude', longitude);
       formData.append('address', address);
+      formData.append('city', 'Bengaluru');
       formData.append('isAnonymous', isAnonymous);
 
       mediaFiles.forEach((file) => {
@@ -116,7 +166,7 @@ export const ReportIncidentPage = () => {
       setSuccess(true);
 
       setTimeout(() => {
-        navigate('/citizen/complaints');
+        navigate('/citizen/my-reports');
       }, 1500);
     } catch (err) {
       setLoading(false);
@@ -138,7 +188,7 @@ export const ReportIncidentPage = () => {
           Report Traffic Hazard or Road Incident
         </h1>
         <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl">
-          Geo-tag road blockages, potholes, or accidents. Your report alerts nearby commuters and queues rapid dispatch for Bengaluru Traffic Police.
+          Geo-tag potholes, collisions, or flooding. Automatically matches nearby duplicate reports and alerts Traffic Police response teams.
         </p>
       </div>
 
@@ -146,8 +196,8 @@ export const ReportIncidentPage = () => {
         <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-3 text-emerald-300">
           <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0" />
           <div>
-            <p className="font-semibold text-sm">Report Logged Successfully!</p>
-            <p className="text-xs text-emerald-400/80">Redirecting to your complaint tracking console...</p>
+            <p className="font-semibold text-sm">Incident Submitted Successfully!</p>
+            <p className="text-xs text-emerald-400/80">Directing to your private reports log...</p>
           </div>
         </div>
       )}
@@ -159,6 +209,62 @@ export const ReportIncidentPage = () => {
         </div>
       )}
 
+      {/* DUPLICATE WARNING ACCORDION */}
+      {duplicates.length > 0 && !acknowledgedDuplicates && (
+        <div className="p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 space-y-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Copy className="w-5 h-5 text-amber-400 flex-shrink-0" />
+              <div>
+                <h3 className="font-bold text-sm text-white">
+                  Potential Existing Reports Detected Nearby ({duplicates.length})
+                </h3>
+                <p className="text-xs text-amber-300/80">
+                  A similar incident was recently reported near your selected location. Please check if your hazard is already logged:
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setAcknowledgedDuplicates(true)}
+              className="text-xs font-semibold px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 rounded-xl border border-amber-500/40"
+            >
+              Proceed Anyway
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-2">
+            {duplicates.slice(0, 2).map((dup, i) => (
+              <div
+                key={i}
+                className="p-3 rounded-xl bg-city-dark/80 border border-amber-500/20 flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-mono text-[11px] text-amber-400">
+                      {dup.incident.incidentId} • {dup.confidence}% Match
+                    </span>
+                    <span className="text-[10px] font-mono text-slate-400">~{dup.distanceMeters}m away</span>
+                  </div>
+                  <h4 className="font-semibold text-xs text-white truncate">{dup.incident.title}</h4>
+                  <p className="text-[11px] text-slate-400 truncate">{dup.incident.address}</p>
+                </div>
+                <div className="mt-2 flex items-center justify-between pt-2 border-t border-slate-800 text-[11px]">
+                  <span className="text-slate-400">Status: {dup.incident.status}</span>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/citizen/complaints')}
+                    className="text-electric-light hover:underline font-semibold"
+                  >
+                    View & Confirm
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Main Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Step 1: Category Selection */}
@@ -166,19 +272,19 @@ export const ReportIncidentPage = () => {
           <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-3">
             1. Select Incident Category
           </label>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
             {categories.map((cat) => (
               <button
                 type="button"
                 key={cat.id}
                 onClick={() => setCategory(cat.id)}
-                className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between ${
+                className={`p-3 rounded-xl border text-left transition-all flex items-center gap-3 ${
                   category === cat.id
                     ? 'bg-electric/15 border-electric text-white shadow-lg shadow-electric/15'
                     : 'bg-city-surface/50 border-city-border hover:bg-city-hover text-slate-300'
                 }`}
               >
-                <span className="text-2xl mb-1">{cat.icon}</span>
+                <span className="text-2xl">{cat.icon}</span>
                 <span className="text-xs font-semibold truncate">{cat.label}</span>
               </button>
             ))}
@@ -195,7 +301,7 @@ export const ReportIncidentPage = () => {
               { id: 'low', label: 'Low', desc: 'Minor delay or annoyance', color: 'border-emerald-500/40 text-emerald-400' },
               { id: 'medium', label: 'Medium', desc: 'Lane slow-down', color: 'border-amber-500/40 text-amber-400' },
               { id: 'high', label: 'High', desc: 'Major corridor blockage', color: 'border-orange-500/40 text-orange-400' },
-              { id: 'critical', label: 'Critical', desc: 'Life risk or road blocked', color: 'border-rose-500/40 text-rose-400' }
+              { id: 'critical', label: 'Critical', desc: 'Life hazard or road impassable', color: 'border-rose-500/40 text-rose-400' }
             ].map((sev) => (
               <button
                 type="button"
@@ -214,16 +320,16 @@ export const ReportIncidentPage = () => {
           </div>
         </div>
 
-        {/* Step 3: Geo-Tag Location Picker */}
+        {/* Step 3: Location Selection */}
         <div className="bg-city-card border border-city-border rounded-2xl p-6 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
-                3. Precise Geospatial Pin
+                3. Precise Location Selection
               </label>
-              <p className="text-xs text-slate-400">Click anywhere on the map to set exact coordinates</p>
+              <p className="text-xs text-slate-400">Click on the map or drag the pin to set the exact incident spot</p>
             </div>
-            {/* Bengaluru Junction Presets */}
+            {/* Quick junction presets */}
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
               <span className="text-[11px] font-mono text-slate-400 flex-shrink-0">Presets:</span>
               {presets.map((p) => (
@@ -243,6 +349,7 @@ export const ReportIncidentPage = () => {
             latitude={latitude}
             longitude={longitude}
             onLocationChange={handleLocationChange}
+            onAddressDetected={handleAddressDetected}
             pinColor={severity === 'critical' ? '#ef4444' : '#0ea5e9'}
           />
 
@@ -278,7 +385,7 @@ export const ReportIncidentPage = () => {
               maxLength={150}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. 3-foot deep pothole causing vehicle tire damage"
+              placeholder="e.g. 3-foot deep pothole causing vehicle tire punctures"
               className="w-full px-4 py-2.5 bg-city-surface/70 border border-city-border rounded-xl text-sm text-white placeholder:text-slate-400 focus:outline-none focus:border-electric transition-all"
             />
           </div>
@@ -293,7 +400,7 @@ export const ReportIncidentPage = () => {
               rows={4}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe the obstruction, lane affected, vehicle types at risk, and suggested detour if known..."
+              placeholder="Describe lane affected, damage type, vehicle categories at risk, and suggested detour..."
               className="w-full px-4 py-2.5 bg-city-surface/70 border border-city-border rounded-xl text-sm text-white placeholder:text-slate-400 focus:outline-none focus:border-electric transition-all"
             />
           </div>
@@ -302,7 +409,7 @@ export const ReportIncidentPage = () => {
         {/* Step 5: Photo / Media Attachments */}
         <div className="bg-city-card border border-city-border rounded-2xl p-6 space-y-3">
           <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
-            5. Evidence Media (Optional, Max 5 Photos/Videos)
+            5. Evidence Media (Optional, Max 5 Photos or Short Videos)
           </label>
 
           <div className="flex flex-wrap gap-3">
@@ -351,7 +458,7 @@ export const ReportIncidentPage = () => {
             <div>
               <p className="text-sm font-semibold text-white">Report Anonymously</p>
               <p className="text-xs text-slate-400">
-                Omits your account name & phone number from public lists and officer view.
+                Hides your name and contact details from the public list and officer view.
               </p>
             </div>
           </div>
@@ -373,7 +480,7 @@ export const ReportIncidentPage = () => {
             <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
           ) : (
             <>
-              <span>Submit Verified Hazard Report</span>
+              <span>Submit Road Hazard Report</span>
               <ArrowRight className="w-4 h-4" />
             </>
           )}
