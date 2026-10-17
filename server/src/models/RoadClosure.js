@@ -97,3 +97,4 @@ roadClosureSchema.pre('validate', async function (next) {
 });
 
 module.exports = mongoose.model('RoadClosure', roadClosureSchema);
+

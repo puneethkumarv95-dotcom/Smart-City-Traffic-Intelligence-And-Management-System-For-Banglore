@@ -15,3 +15,4 @@ router.delete('/:id', savedRouteController.deleteSavedRoute);
 router.get('/:id/check', savedRouteController.checkRouteHazards);
 
 module.exports = router;
+

@@ -190,3 +190,4 @@ module.exports = {
   getTrafficConditions,
   BENGALURU_CORRIDORS
 };
+

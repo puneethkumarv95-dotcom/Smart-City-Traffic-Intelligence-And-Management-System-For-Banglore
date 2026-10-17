@@ -10,3 +10,4 @@ router.patch('/read-all', notificationController.markAllAsRead);
 router.patch('/:id/read', notificationController.markAsRead);
 
 module.exports = router;
+

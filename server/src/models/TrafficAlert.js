@@ -73,3 +73,4 @@ trafficAlertSchema.pre('validate', async function (next) {
 });
 
 module.exports = mongoose.model('TrafficAlert', trafficAlertSchema);
+

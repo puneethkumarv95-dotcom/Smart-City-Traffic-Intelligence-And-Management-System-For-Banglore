@@ -323,3 +323,4 @@ export const TrafficHistoryPage = () => {
 };
 
 export default TrafficHistoryPage;
+
