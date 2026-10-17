@@ -15,6 +15,7 @@
     "dev:ai": "python -m uvicorn app.main:app --app-dir ai-service --reload-dir ai-service --host 127.0.0.1 --port 8000 --reload",
     "install:all": "npm install && npm install --prefix server && npm install --prefix client",
     "seed": "npm --prefix server run seed",
+    "test": "npm run test:server && npm run test:client",
     "test:server": "npm --prefix server test",
     "test:client": "npm --prefix client test",
     "build:client": "npm --prefix client run build"
