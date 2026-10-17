@@ -24,7 +24,7 @@
 
 | ID | Module | Feature / Scenario | Expected Result | Actual Result | Status | Error Details | Fix Applied | Retest Result |
 | :--- | :--- | :--- | :--- | :--- | :---: | :--- | :--- | :---: |
-| **SYS-01** | Root Runtime | Top-level `npm run dev` startup | Starts Express (5000), Vite (5173), and FastAPI (8000) concurrently | Express, Vite, and FastAPI started simultaneously with colored prefixes | **PASS** | `npm error Missing script: "dev"` | Added `concurrently` and top-level scripts in `package.json` | **PASS** |
+| **SYS-01** | Root Runtime | Top-level `npm run dev` startup | Starts Express (5000), Vite (5173), and FastAPI (8000) concurrently | Express, Vite, and FastAPI started simultaneously with colored prefixes | **PASS** | `Missing script: "dev"` & lingering port bindings on exit | Added `concurrently` in `package.json` & graceful shutdown with EADDRINUSE protection in `server.js` | **PASS** |
 | **SYS-02** | System Health | Backend API Health Check (`GET /api/health`) | HTTP 200 with uptime and status `operational` | HTTP 200 with JSON payload and database status | **PASS** | None | N/A | **PASS** |
 | **SYS-03** | System Health | Python AI Microservice Health (`GET /health`) | HTTP 200 with status `healthy` and initialized models | HTTP 200 with initialized model status | **PASS** | None | Configured uvicorn reloader scoped to `ai-service/` | **PASS** |
 | **SYS-04** | System Health | React Frontend HTTP Server (`GET /`) | HTTP 200 serving React HTML shell | HTTP 200 with index.html payload | **PASS** | None | N/A | **PASS** |
@@ -112,3 +112,4 @@
 - **Desktop Viewport (1440px)**:
   - Full-screen split layouts for Command Center, Live Map, and Route Planner.
   - Persistent cyber-transit dark navy theme (`#070b14`, `#0b1120`, `#0ea5e9`).
+

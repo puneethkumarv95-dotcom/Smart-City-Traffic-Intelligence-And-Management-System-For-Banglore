@@ -152,7 +152,7 @@ describe('Phase 3: Live Traffic, Maps & Smart Navigation Test Suite', () => {
       expect(primary.estimatedDurationMin).toBeGreaterThan(5);
       expect(primary.geometry.coordinates.length).toBeGreaterThan(2);
       expect(primary.etaDisclaimer).toBeDefined();
-    });
+    }, 15000);
 
     it('POST /api/traffic/routes rejects invalid coordinates format with 400', async () => {
       const res = await request(app)

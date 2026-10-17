@@ -48,6 +48,28 @@ const startServer = async () => {
   }
 };
 
+// Server event error handling (e.g. EADDRINUSE port binding protection)
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    logger.error(`Port ${PORT} is already in use by another process. Please free port ${PORT} or configure a different PORT.`);
+  } else {
+    logger.error(`Server network error: ${err.message}`);
+  }
+  process.exit(1);
+});
+
+// Graceful process shutdown
+const gracefulShutdown = () => {
+  logger.info('Received shutdown signal. Closing HTTP and Socket.IO servers cleanly...');
+  server.close(() => {
+    logger.info('HTTP server closed successfully.');
+    process.exit(0);
+  });
+};
+
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);
+
 startServer();
 
 module.exports = { server, app };

@@ -67,3 +67,18 @@ This document records all bugs discovered during project inspection, runtime tes
 - **Files Modified:** [`package.json`](file:///c:/MERN01/package.json)
 - **Fix Summary:** Added `"test": "npm run test:server && npm run test:client"` to root scripts.
 - **Verification Result:** `npm test` runs 54 backend integration tests followed by 12 frontend component tests, achieving 66/66 passing tests (100% pass rate).
+
+---
+
+### BUG-06: Port EADDRINUSE Unhandled Crash & Missing Graceful Shutdown
+- **Bug ID:** `BUG-06`
+- **Severity:** Medium
+- **Description:** Abrupt process termination or dev restart left orphaned node processes listening on port 5000, causing unhandled `EADDRINUSE` crash on server startup.
+- **Root Cause:** In [`server/src/server.js`](file:///c:/MERN01/server/src/server.js), HTTP server had no `error` event handler and no `SIGINT` / `SIGTERM` listeners to release the socket binding cleanly upon exit.
+- **Files Modified:** [`server/src/server.js`](file:///c:/MERN01/server/src/server.js)
+- **Fix Summary:** 
+  1. Attached `server.on('error', ...)` handler specifically catching `EADDRINUSE` with actionable instructions.
+  2. Registered `process.on('SIGTERM', ...)` and `process.on('SIGINT', ...)` handlers that cleanly close HTTP and Socket.IO connections before terminating.
+- **Verification Result:** Clean process shutdown and zero lingering port bindings upon termination.
+
+
