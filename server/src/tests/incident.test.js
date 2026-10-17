@@ -124,6 +124,79 @@ describe('Phase 2: Comprehensive Incident Management Workflow Test Suite', () =>
       primaryIncident = res.body.data;
     });
 
+    it('POST /api/incidents with multipart media files attaches images and stores them', async () => {
+      const res = await request(app)
+        .post('/api/incidents')
+        .set('Authorization', `Bearer ${citizenToken}`)
+        .field('title', '[PHASE2_TEST] Flooded underpass near Hebbal with evidence')
+        .field('category', 'Road Flooding')
+        .field('description', 'Water level reaching 2 feet causing car stalling under bridge.')
+        .field('severity', 'high')
+        .field('latitude', '13.0362')
+        .field('longitude', '77.5975')
+        .field('address', 'Hebbal Underpass, Bangalore')
+        .field('isAnonymous', 'false')
+        .attach('media', Buffer.from('fake image content'), 'pothole.jpg');
+
+      expect(res.status).toBe(201);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.images.length).toBe(1);
+      expect(res.body.data.images[0].url).toMatch(/^\/uploads\/evidence-/);
+      expect(res.body.data.isAnonymous).toBe(false);
+      expect(res.body.data.reportedBy).toBe(citizenUser._id.toString());
+    });
+
+    it('Anonymous reports redact reportedBy for unprivileged users but reveal to police', async () => {
+      const anonRes = await request(app)
+        .post('/api/incidents')
+        .set('Authorization', `Bearer ${citizenToken}`)
+        .send({
+          title: '[PHASE2_TEST] Anonymous traffic congestion report',
+          category: 'Traffic Congestion',
+          description: 'Gridlock near Hebbal signal due to signal malfunction.',
+          severity: 'medium',
+          latitude: 13.0355,
+          longitude: 77.5973,
+          address: 'Hebbal Flyover Ramp',
+          isAnonymous: true
+        });
+
+      expect(anonRes.status).toBe(201);
+      const anonIncidentId = anonRes.body.data._id;
+
+      // Public / unauthenticated: reportedBy is null
+      const pubRes = await request(app).get(`/api/incidents/${anonIncidentId}`);
+      expect(pubRes.status).toBe(200);
+      expect(pubRes.body.data.isAnonymous).toBe(true);
+      expect(pubRes.body.data.reportedBy).toBeNull();
+
+      // Police: reportedBy is visible
+      const polRes = await request(app)
+        .get(`/api/incidents/${anonIncidentId}`)
+        .set('Authorization', `Bearer ${policeToken}`);
+      expect(polRes.status).toBe(200);
+      expect(polRes.body.data.reportedBy).toBeDefined();
+      expect(polRes.body.data.reportedBy._id.toString()).toBe(citizenUser._id.toString());
+    });
+
+    it('POST /api/incidents with disallowed file type is rejected with 400', async () => {
+      const res = await request(app)
+        .post('/api/incidents')
+        .set('Authorization', `Bearer ${citizenToken}`)
+        .field('title', '[PHASE2_TEST] Malicious upload test')
+        .field('category', 'Other')
+        .field('description', 'Attempting to upload executable script file.')
+        .field('severity', 'low')
+        .field('latitude', '13.0360')
+        .field('longitude', '77.5970')
+        .field('address', 'Hebbal Road')
+        .attach('media', Buffer.from('console.log("bad")'), 'malicious.js');
+
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.message).toMatch(/Only JPEG, PNG, WEBP images and MP4\/WEBM videos are permitted/);
+    });
+
     it('Incident status history is recorded in IncidentStatusHistory collection', async () => {
       const history = await IncidentStatusHistory.find({ incident: primaryIncident._id });
       expect(history.length).toBeGreaterThan(0);
@@ -318,6 +391,90 @@ describe('Phase 2: Comprehensive Incident Management Workflow Test Suite', () =>
       expect(markRes.status).toBe(200);
       expect(markRes.body.data.status).toBe('duplicate');
       expect(markRes.body.data.duplicateOf.toString()).toBe(primaryIncident._id.toString());
+    });
+
+    it('POST /api/incidents/:id/reject rejects an incident with required reason', async () => {
+      // Create a candidate incident to reject
+      const rejectCandidate = await request(app)
+        .post('/api/incidents')
+        .set('Authorization', `Bearer ${citizenToken}`)
+        .send({
+          title: '[PHASE2_TEST] Spurious hazard report to be rejected',
+          category: 'Other',
+          description: 'Non-existent hazard reported for testing rejection.',
+          severity: 'low',
+          latitude: 13.0365,
+          longitude: 77.5975,
+          address: 'Hebbal, Bengaluru'
+        });
+
+      const res = await request(app)
+        .post(`/api/incidents/${rejectCandidate.body.data._id}/reject`)
+        .set('Authorization', `Bearer ${policeToken}`)
+        .send({ reason: 'False alarm verified by ground patrol.' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.status).toBe('rejected');
+      expect(res.body.data.verificationStatus).toBe('rejected');
+    });
+
+    it('Invalid status transition is rejected with 400', async () => {
+      // Create fresh submitted incident and attempt premature jump to resolved
+      const freshInc = await request(app)
+        .post('/api/incidents')
+        .set('Authorization', `Bearer ${citizenToken}`)
+        .send({
+          title: '[PHASE2_TEST] Fresh incident for invalid transition test',
+          category: 'Pothole',
+          description: 'Testing invalid direct transition.',
+          severity: 'low',
+          latitude: 13.0360,
+          longitude: 77.5970,
+          address: 'Hebbal Road'
+        });
+
+      const res = await request(app)
+        .patch(`/api/incidents/${freshInc.body.data._id}/status`)
+        .set('Authorization', `Bearer ${policeToken}`)
+        .send({ status: 'resolved', notes: 'Premature resolution attempt' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.message).toMatch(/Invalid status transition/);
+    });
+
+    it('POST /api/incidents/:id/feedback allows citizen to rate resolved incident', async () => {
+      const res = await request(app)
+        .post(`/api/incidents/${primaryIncident._id}/feedback`)
+        .set('Authorization', `Bearer ${citizenToken}`)
+        .send({ rating: 5, comments: 'Pothole was patched very quickly, smooth road now.' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.rating).toBe(5);
+    });
+
+    it('POST /api/incidents/:id/feedback fails if incident is not resolved', async () => {
+      const unresRes = await request(app)
+        .post('/api/incidents')
+        .set('Authorization', `Bearer ${citizenToken}`)
+        .send({
+          title: '[PHASE2_TEST] Unresolved incident for feedback test',
+          category: 'Pothole',
+          description: 'Testing feedback before resolution occurs.',
+          latitude: 13.0358,
+          longitude: 77.5970,
+          address: 'Hebbal, Bengaluru'
+        });
+
+      const res = await request(app)
+        .post(`/api/incidents/${unresRes.body.data._id}/feedback`)
+        .set('Authorization', `Bearer ${citizenToken}`)
+        .send({ rating: 4, comments: 'Too early' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.message).toMatch(/Feedback can only be provided once an incident has been resolved/);
     });
   });
 

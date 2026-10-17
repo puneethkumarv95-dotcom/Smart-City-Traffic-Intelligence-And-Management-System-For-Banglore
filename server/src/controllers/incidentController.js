@@ -83,8 +83,9 @@ const createIncident = async (req, res, next) => {
       }
     }
 
-    const reporterUser = !isAnonymous && req.user ? req.user._id : null;
-    const reporterName = !isAnonymous && req.user ? req.user.name : 'Anonymous Citizen';
+    const isAnon = isAnonymous === true || isAnonymous === 'true';
+    const reporterUser = req.user ? req.user._id : null;
+    const reporterName = !isAnon && req.user ? req.user.name : 'Anonymous Citizen';
     const actorRole = req.user ? req.user.role : 'citizen';
 
     // Automatic Severity Safeguards (Critical incidents expire later and trigger notifications)
@@ -104,7 +105,7 @@ const createIncident = async (req, res, next) => {
       city,
       zone: matchedZone,
       reportedBy: reporterUser,
-      isAnonymous: Boolean(isAnonymous),
+      isAnonymous: isAnon,
       reporterIp: req.ip || '',
       status: 'submitted',
       verificationStatus: 'pending',
@@ -161,10 +162,16 @@ const createIncident = async (req, res, next) => {
       userAgent: req.headers['user-agent'] || ''
     });
 
+    const isOfficerOrAdmin = req.user && ['police', 'emergency', 'admin'].includes(req.user.role);
+    const returnData = incident.toObject();
+    if (isAnon && !isOfficerOrAdmin) {
+      returnData.reportedBy = null;
+    }
+
     res.status(201).json({
       success: true,
       message: 'Incident reported successfully and logged in transit queue.',
-      data: incident
+      data: returnData
     });
   } catch (error) {
     next(error);

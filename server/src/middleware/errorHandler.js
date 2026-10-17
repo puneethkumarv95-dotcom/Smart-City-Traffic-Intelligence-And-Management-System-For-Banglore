@@ -28,6 +28,20 @@ const errorHandler = (err, req, res, next) => {
     message = 'Authentication token expired';
   }
 
+  // Handle Multer upload errors
+  if (err.name === 'MulterError') {
+    statusCode = 400;
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      message = 'Uploaded file exceeds the maximum allowed size limit of 15MB.';
+    } else if (err.code === 'LIMIT_FILE_COUNT') {
+      message = 'Too many files uploaded. Maximum is 5 media attachments.';
+    } else {
+      message = `Upload error: ${err.message}`;
+    }
+  } else if (err.message && err.message.startsWith('Invalid file type:')) {
+    statusCode = 400;
+  }
+
   logger.error(`[Error] ${statusCode} - ${message} - ${req.originalUrl} - ${req.method} - ${req.ip}`);
 
   res.status(statusCode).json({
