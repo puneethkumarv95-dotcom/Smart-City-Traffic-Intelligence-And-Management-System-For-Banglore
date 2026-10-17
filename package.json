@@ -8,9 +8,12 @@
     "client"
   ],
   "scripts": {
-    "install:all": "npm install && npm install --prefix server && npm install --prefix client",
+    "dev": "concurrently -k -n \"SERVER,CLIENT,AI\" -c \"blue.bold,cyan.bold,green.bold\" \"npm run dev:server\" \"npm run dev:client\" \"npm run dev:ai\"",
+    "dev:mern": "concurrently -k -n \"SERVER,CLIENT\" -c \"blue.bold,cyan.bold\" \"npm run dev:server\" \"npm run dev:client\"",
     "dev:server": "npm --prefix server run dev",
     "dev:client": "npm --prefix client run dev",
+    "dev:ai": "python -m uvicorn app.main:app --app-dir ai-service --reload-dir ai-service --host 127.0.0.1 --port 8000 --reload",
+    "install:all": "npm install && npm install --prefix server && npm install --prefix client",
     "seed": "npm --prefix server run seed",
     "test:server": "npm --prefix server test",
     "test:client": "npm --prefix client test",
@@ -24,6 +27,8 @@
     "geospatial"
   ],
   "author": "MCA Engineering Team",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^10.0.6"
+  }
 }
-

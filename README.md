@@ -60,11 +60,16 @@ npm --prefix server run seed
 
 ### 4. Run Development Servers
 ```bash
-# Terminal 1: Backend API & Socket.IO (Port 5000)
-npm --prefix server run dev
+# Start all services concurrently (Express Backend + React Vite + Python FastAPI):
+npm run dev
 
-# Terminal 2: React Vite Frontend (Port 5173)
-npm --prefix client run dev
+# Or start only the MERN services (Backend + Frontend):
+npm run dev:mern
+
+# Or run individual services:
+npm run dev:server  # Node.js Express Backend on Port 5000
+npm run dev:client  # React Vite Frontend on Port 5173
+npm run dev:ai      # Python FastAPI Microservice on Port 8000
 ```
 
 Visit [http://localhost:5173](http://localhost:5173) in your browser.
