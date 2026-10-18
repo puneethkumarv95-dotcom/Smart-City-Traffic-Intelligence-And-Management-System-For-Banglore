@@ -4,9 +4,16 @@ import { BrowserRouter, MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, vi } from 'vitest';
 import { RoleGuard } from '../components/common/RoleGuard';
 import { Sidebar } from '../components/layout/Sidebar';
+import { Navbar } from '../components/layout/Navbar';
 import { Badge } from '../components/ui/Badge';
 import { StatCard } from '../components/ui/StatCard';
 import { Activity } from 'lucide-react';
+
+vi.mock('../services/trafficService', () => ({
+  default: {
+    getNotifications: vi.fn().mockResolvedValue({ data: [], unreadCount: 0 })
+  }
+}));
 
 let mockAuth = {
   user: { name: 'Officer Arjun', role: 'police' },
@@ -28,6 +35,15 @@ vi.mock('../store/useUIStore', () => ({
 }));
 
 describe('Navigation & Component Testing', () => {
+  describe('Navbar', () => {
+    it('renders the live clock', () => {
+      mockAuth = { user: null, logout: vi.fn() };
+      render(<Navbar />);
+
+      expect(screen.getByText(/IST$/)).toBeInTheDocument();
+    });
+  });
+
   describe('RoleGuard', () => {
     it('allows access when user has an allowed role', () => {
       mockAuth = {
@@ -154,4 +170,3 @@ describe('Navigation & Component Testing', () => {
     });
   });
 });
-

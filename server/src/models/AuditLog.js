@@ -7,11 +7,20 @@ const auditLogSchema = new mongoose.Schema(
       ref: 'User',
       default: null
     },
+    performedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null
+    },
     actorEmail: {
       type: String,
       default: 'system'
     },
     actorRole: {
+      type: String,
+      default: 'system'
+    },
+    role: {
       type: String,
       default: 'system'
     },
@@ -22,11 +31,19 @@ const auditLogSchema = new mongoose.Schema(
     },
     resourceType: {
       type: String,
-      required: true,
+      default: 'General',
       index: true
+    },
+    targetEntity: {
+      type: String,
+      default: 'General'
     },
     resourceId: {
       type: String,
+      default: null
+    },
+    targetId: {
+      type: mongoose.Schema.Types.Mixed,
       default: null
     },
     details: {
@@ -47,7 +64,22 @@ const auditLogSchema = new mongoose.Schema(
   }
 );
 
+auditLogSchema.pre('save', function (next) {
+  if (!this.actor && this.performedBy) {
+    this.actor = this.performedBy;
+  }
+  if (!this.resourceType && this.targetEntity) {
+    this.resourceType = this.targetEntity;
+  }
+  if (!this.resourceId && this.targetId) {
+    this.resourceId = this.targetId.toString();
+  }
+  if (!this.actorRole && this.role) {
+    this.actorRole = this.role;
+  }
+  next();
+});
+
 auditLogSchema.index({ createdAt: -1 });
 
 module.exports = mongoose.model('AuditLog', auditLogSchema);
-

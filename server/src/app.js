@@ -10,6 +10,9 @@ const incidentRoutes = require('./routes/incidentRoutes');
 const trafficRoutes = require('./routes/trafficRoutes');
 const savedRouteRoutes = require('./routes/savedRouteRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const policeRoutes = require('./routes/policeRoutes');
+const emergencyRoutes = require('./routes/emergencyRoutes');
+const feedbackRoutes = require('./routes/feedbackRoutes');
 const incidentController = require('./controllers/incidentController');
 const logger = require('./utils/logger');
 
@@ -86,6 +89,9 @@ app.use('/api/incidents', incidentRoutes);
 app.use('/api/traffic', trafficRoutes);
 app.use('/api/routes/saved', savedRouteRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/police', policeRoutes);
+app.use('/api/emergency', emergencyRoutes);
+app.use('/api/feedback', feedbackRoutes);
 
 // Super Admin Direct Incident Statistics API
 app.get(

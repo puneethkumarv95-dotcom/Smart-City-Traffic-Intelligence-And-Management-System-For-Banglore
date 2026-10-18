@@ -32,7 +32,8 @@ const calculateRoutes = async ({ origin, destination }) => {
 
   try {
     // 1. Fetch real-world turn-by-turn road geometry from OpenStreetMap OSRM
-    const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${origLng},${origLat};${destLng},${destLat}?overview=full&geometries=geojson&alternatives=true&steps=true`;
+    const osrmBase = process.env.OSRM_ROUTER_URL || 'https://router.project-osrm.org';
+    const osrmUrl = `${osrmBase}/route/v1/driving/${origLng},${origLat};${destLng},${destLat}?overview=full&geometries=geojson&alternatives=true&steps=true`;
     const response = await fetch(osrmUrl, {
       signal: AbortSignal.timeout(2500),
       headers: { 'User-Agent': 'SCTIMS-TrafficSystem/1.0' }

@@ -21,6 +21,7 @@ export const Navbar = () => {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [currentTime, setCurrentTime] = useState('');
 
   useEffect(() => {
     const fetchNotifications = async () => {

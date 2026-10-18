@@ -159,7 +159,11 @@ const getTrafficConditions = async () => {
     return cachedTrafficData;
   }
 
-  const liveApiKey = process.env.TOMTOM_API_KEY || process.env.MAPBOX_ACCESS_TOKEN || process.env.HERE_API_KEY;
+  const liveApiKey =
+    process.env.TOMTOM_API_KEY ||
+    process.env.MAPBOX_ACCESS_TOKEN ||
+    process.env.HERE_API_KEY ||
+    process.env.TRAFFIC_PROVIDER_API_KEY;
 
   if (liveApiKey) {
     try {

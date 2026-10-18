@@ -388,10 +388,10 @@ export const LiveTrafficMapPage = () => {
         >
           <MapRecenter center={mapCenter} zoom={mapZoom} />
 
-          {/* CartoDB Dark Matter Tiles for Cyber-Smart City Look */}
+          {/* Official Free OpenStreetMap Layer (Styled via .leaflet-tile in index.css) */}
           <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-            url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
 
           {/* User's Current Location Marker */}
